@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -46,7 +48,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		database.Close()
+		os.Exit(1)
+	}()
 	defer database.Close()
 
 	err = database.Put([]byte("PING"), []byte("PONG"), nil)
