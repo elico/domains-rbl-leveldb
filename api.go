@@ -252,12 +252,12 @@ func batchInsert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(u, "BatchInsert Request file body size => ", len(bodyString))
+	fmt.Println(u, ": BatchInsert Request file body size => ", len(bodyString))
 
 	lines := strings.Split(string(bodyString), "\n")
 	batch := new(leveldb.Batch)
 
-	fmt.Println(u, "BatchInsert Request body lines count => ", len(lines))
+	fmt.Println(u, ": BatchInsert Request body lines count => ", len(lines))
 
 	fmt.Println(u, ": Started a BatchInsert update from => ", r.RemoteAddr)
 	significantProgress := len(lines) / 20
@@ -328,12 +328,12 @@ func batchDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(u, "BatchDelete Request file body size => ", len(bodyString))
+	fmt.Println(u, ": BatchDelete Request file body size => ", len(bodyString))
 
 	lines := strings.Split(string(bodyString), "\n")
 	batch := new(leveldb.Batch)
 
-	fmt.Println(u, "BatchDelete body lines count => ", len(lines))
+	fmt.Println(u, ": BatchDelete body lines count => ", len(lines))
 
 	fmt.Println(u, ": Started a BatchDelete update from => ", r.RemoteAddr)
 	significantProgress := len(lines) / 20
