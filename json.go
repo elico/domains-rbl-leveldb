@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func jsonPrettyPrint(in []byte) []byte {
@@ -55,8 +56,11 @@ func JSONBatchOptions(w http.ResponseWriter, r *http.Request) {
 // JSONError ---
 func JSONError(w http.ResponseWriter, r *http.Request, err error) {
 	w.Header().Set("Content-Type", "application/json")
-
-	fmt.Fprintf(os.Stderr, "Error accured: %s\n", err)
+	switch {
+	case strings.Contains("host or url varialbles are required", err.Error()):
+	default:
+		fmt.Fprintf(os.Stderr, "Error accured: %s\n", err)
+	}
 
 	w.Header().Set("Allow", "OPTIONS, GET, HEAD, POST")
 	errorDetails := make(map[string]interface{})

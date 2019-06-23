@@ -79,6 +79,7 @@ func main() {
 	// All URLs will be handled by this function
 	m.HandleFunc("/insert/", insert)
 	m.HandleFunc("/search/", search)
+	m.HandleFunc("/recursiveSearch/", recursiveSearch)
 	m.HandleFunc("/delete/", delete)
 
 	m.HandleFunc("/whitelist/", delete)

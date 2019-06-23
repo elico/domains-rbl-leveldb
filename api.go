@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/twinj/uuid"
 )
@@ -193,6 +194,8 @@ func search(w http.ResponseWriter, r *http.Request) {
 	response := make(map[string]interface{})
 	response["OK"] = "1"
 
+	w.Header().Set("X-Test-Domain", testhost)
+
 	_, err := database.Get([]byte(testhost), nil)
 
 	switch {
@@ -205,6 +208,92 @@ func search(w http.ResponseWriter, r *http.Request) {
 		response["blacklisted"] = "true"
 		response["OK"] = "0"
 		w.Header().Set("X-Vote", "BLOCK")
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+func recursiveSearch(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	switch r.Method {
+	case "GET":
+	case "POST":
+	case "HEAD":
+	default:
+		// Unsupportted method PUT etc..
+		JSONOptions(w, r)
+		return
+	}
+	testhost := r.FormValue("host")
+	testurl := r.FormValue("url")
+	w.Header().Set("Host-Var-Length", strconv.Itoa(len(testhost)))
+	w.Header().Set("Url-Var-Length", strconv.Itoa(len(testurl)))
+
+	switch {
+	case (len(testhost) > 0):
+		_, err := url.Parse("http://" + testhost + "/")
+		if err != nil {
+			JSONError(w, r, fmt.Errorf("malformed host varialble: %s", testhost))
+			return
+		}
+	case (len(testurl) > 0):
+		parsedURL, err := url.Parse(testurl)
+		if err != nil {
+			JSONError(w, r, fmt.Errorf("malformed url varialble: %s", testurl))
+			return
+		}
+		testhost = parsedURL.Hostname()
+	default:
+		JSONError(w, r, fmt.Errorf("host or url varialbles are required"))
+		return
+	}
+
+	response := make(map[string]interface{})
+	response["OK"] = "1"
+
+	w.Header().Set("X-Test-Domain", testhost)
+
+	var lookupPath = make([]string, 0, 24)
+
+	// A basic simple test to make sure that there is a need to lookup more then one domain.
+	// Need to verify how ipv6 host are represented
+	switch {
+	case govalidator.IsIP(testhost):
+		lookupPath = append(lookupPath, testhost)
+
+	case govalidator.IsDNSName(testhost) && !govalidator.IsIP(testhost):
+		domArr := strings.Split(testhost, ".")
+
+		i := 0
+		for {
+			if i >= len(domArr) {
+				break
+			}
+			lookupPath = append(lookupPath, strings.Join(domArr[i:len(domArr)], "."))
+			i++
+		}
+	default:
+		// Unpredictable hostname
+	}
+
+	for _, v := range lookupPath {
+		_, err := database.Get([]byte(v), nil)
+
+		switch {
+		case err == leveldb.ErrNotFound:
+		case err != nil:
+			JSONError(w, r, fmt.Errorf(err.Error()))
+			return
+		default:
+			// There is a row and there is no error aka blacklisted
+			response["blacklisted"] = "true"
+			response["OK"] = "0"
+			response["bl-key"] = v
+			w.Header().Set("X-Vote", "BLOCK")
+			w.Header().Set("X-Bl-Key", v)
+			break
+		}
 	}
 
 	json.NewEncoder(w).Encode(response)
